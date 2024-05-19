@@ -37,8 +37,8 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
                     if dataset_name == dataset:
                         for model in prior_knowledge_matrix[dataset_name]:
                             pr_g = prior_knowledge_matrix[dataset_name][model]
-                            loss += 0.5 * prior_k_weight / X.shape[1] * ((pr_g - W) ** 2).sum()
-                            G_loss += - 1.0 / X.shape[0] * prior_k_weight * (pr_g - W)
+                            loss += 0.5 * prior_k_weight * prior_knowledge.LLM_weights[model] / X.shape[1] * ((pr_g - W) ** 2).sum()
+                            G_loss += - 1.0 / X.shape[0] * prior_k_weight * (pr_g - W) * prior_knowledge.LLM_weights[model]
 
         elif loss_type == 'logistic':
             loss = 1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum()
@@ -60,9 +60,9 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
         #     E = np.linalg.matrix_power(M, d - 1)
         #     h = (E.T * M).sum() - d
 
-        if np.isnan(E).any() or np.isinf(E).any():
-            print(W * W)
-            print("Nan value in E")
+        # if np.isnan(E).any() or np.isinf(E).any():
+        #     print(W * W)
+        #     print("Nan value in E")
         G_h = E.T * W * 2
         return h, G_h
 
@@ -116,14 +116,17 @@ if __name__ == '__main__':
     # X = utils.simulate_linear_sem(W_true, n, sem_type)
     # np.savetxt('X.csv', X, delimiter=',')
 
-    dataset = "SACHS"
+    dataset = "Asia"
 
     datapath, sol_path, plot_dir = helper.generate_data_path(dataset)
-    prior_knowledge = PriorKnowledge(dataset, true_graph=True)
-    X = np.load(datapath).astype(np.float32)
+    prior_knowledge = PriorKnowledge(dataset, true_graph=False, LLMs = ['GPT4', 'Gemini', 'GPT3'])
+    
+    X = np.load(datapath).astype(np.float32) * 10
     B_true = np.load(sol_path).astype(np.float32)
 
-    W_est = notears_linear(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=500000, max_iter=100)
+    prior_knowledge.calculate_LLMs_weight(X)
+
+    W_est = notears_linear(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=22, max_iter=100, w_threshold=0.3)
     assert utils.is_dag(W_est)
     np.savetxt(f"{plot_dir}/W_est_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est, delimiter=',')
     acc = utils.count_accuracy(B_true, W_est != 0)

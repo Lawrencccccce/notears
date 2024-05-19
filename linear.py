@@ -101,10 +101,11 @@ if __name__ == '__main__':
     # X = utils.simulate_linear_sem(W_true, n, sem_type)
     # np.savetxt('X.csv', X, delimiter=',')
 
-    dataset = "SACHS"
+    dataset = "Asia"
 
     datapath, sol_path, plot_dir = helper.generate_data_path(dataset)
-    X = np.load(datapath).astype(np.float32)
+    X = np.load(datapath).astype(np.float32) * 10
+    print(X)
     B_true = np.load(sol_path).astype(np.float32)
 
     W_est = notears_linear(X, lambda1=0.1, loss_type='l2')
