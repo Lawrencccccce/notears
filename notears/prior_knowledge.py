@@ -59,6 +59,8 @@ class PriorKnowledge:
                 self.add_Asia_true_knowledge()
             if dataset == 'SACHS':
                 self.add_SACHS_true_knowledge()
+            if dataset == 'Survey':
+                self.add_Survey_true_knowledge()
         else:
             if dataset == 'LUCAS':
                 self.add_LUCAS_knowledge()
@@ -66,6 +68,12 @@ class PriorKnowledge:
                 self.add_Asia_knowledge()
             if dataset == 'SACHS':
                 self.add_SACHS_knowledge()
+            if dataset == 'Survey':
+                self.add_Survey_knowledge()
+            if dataset == 'Earthquake':
+                self.add_Earthquake_knowledge()
+            if dataset == 'Child':
+                self.add_Child_knowledge()
 
         self.dataset = dataset
         self.intersection_result = {}
@@ -127,6 +135,118 @@ class PriorKnowledge:
                 result_matrix[edge] = 1
             self.intersection_result[dataset] = result_matrix
         
+
+    def add_Child_knowledge(self):
+        items = ["DuctFlow", "HypDistrib", "CardiacMixing", "HypoxiaInO2", "LungParench", "CO2", "ChestXray", "LungFlow", "Grunting", "Sick", "LVH", "LVHreport", "LowerBodyO2", "RUQO2", "CO2Report", "XrayReport", "BirthAsphyxia", "Disease", "GruntingReport", "Age"]
+        child_variables = {item: index for index, item in enumerate(items)}
+
+        self.prior_knowledge['Child'] = {}
+        if 'GPT3' in self.LLMs:
+            # GPT3 knowledge
+            self.prior_knowledge['Child']['GPT3'] = np.ones((20, 20)) * 2
+            self.prior_knowledge['Child']['GPT3'][child_variables['CardiacMixing']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['HypDistrib']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['LungParench']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['CO2']][child_variables['Grunting']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['Grunting']][child_variables['Sick']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['LVH']][child_variables['LVHreport']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['LowerBodyO2']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['RUQO2']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['BirthAsphyxia']][child_variables['Disease']] = 1
+            self.prior_knowledge['Child']['GPT3'][child_variables['Age']][child_variables['Disease']] = 1
+
+
+        if 'GPT4' in self.LLMs:
+            # GPT4 knowledge
+            self.prior_knowledge['Child']['GPT4'] = np.ones((20, 20)) * 2
+            self.prior_knowledge['Child']['GPT4'][child_variables['BirthAsphyxia']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['BirthAsphyxia']][child_variables['LungParench']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['HypoxiaInO2']][child_variables['Grunting']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['LungParench']][child_variables['LungFlow']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['LungFlow']][child_variables['LowerBodyO2']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['CO2']][child_variables['CO2Report']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['ChestXray']][child_variables['XrayReport']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['LVH']][child_variables['LVHreport']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['Grunting']][child_variables['GruntingReport']] = 1
+            self.prior_knowledge['Child']['GPT4'][child_variables['Disease']][child_variables['Sick']] = 1
+            
+
+        if 'Gemini' in self.LLMs:
+            self.prior_knowledge['Child']['Gemini'] = np.ones((20, 20)) * 2
+            self.prior_knowledge['Child']['Gemini'][child_variables['BirthAsphyxia']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['Gemini'][child_variables['CardiacMixing']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['Gemini'][child_variables['LungParench']][child_variables['LungFlow']] = 1
+            self.prior_knowledge['Child']['Gemini'][child_variables['LungFlow']][child_variables['HypoxiaInO2']] = 1
+            self.prior_knowledge['Child']['Gemini'][child_variables['HypoxiaInO2']][child_variables['CO2']] = 1
+            self.prior_knowledge['Child']['Gemini'][child_variables['Age']][child_variables['DuctFlow']] = 1
+
+    def add_Earthquake_knowledge(self):
+        self.prior_knowledge['Earthquake'] = {}
+        if 'GPT3' in self.LLMs:
+            # GPT3 knowledge
+            self.prior_knowledge['Earthquake']['GPT3'] = np.ones((5, 5)) * 2
+            # Burglary → Alarm
+            self.prior_knowledge['Earthquake']['GPT3'][0][1] = 1
+            # Earthquake → Alarm
+            self.prior_knowledge['Earthquake']['GPT3'][2][1] = 1
+            # Alarm → JohnCalls
+            self.prior_knowledge['Earthquake']['GPT3'][1][3] = 1
+            # Alarm → MaryCalls
+            self.prior_knowledge['Earthquake']['GPT3'][1][4] = 1
+
+        if 'GPT4' in self.LLMs:
+            # Initialize the matrix for 'EarthquakeModel'
+            self.prior_knowledge['Earthquake']['GPT4'] = np.ones((5, 5)) * 2
+            # Burglary → Alarm
+            self.prior_knowledge['Earthquake']['GPT4'][0][1] = 1
+            # Earthquake → Alarm
+            self.prior_knowledge['Earthquake']['GPT4'][2][1] = 1
+            # Alarm → JohnCalls
+            self.prior_knowledge['Earthquake']['GPT4'][1][3] = 1
+            # Alarm → MaryCalls
+            self.prior_knowledge['Earthquake']['GPT4'][1][4] = 1
+
+        if 'Gemini' in self.LLMs:
+            self.prior_knowledge['Earthquake'] ['Gemini'] = np.ones((5, 5)) * 2
+            # Earthquake → Alarm (if earthquake alarm system exists)
+            self.prior_knowledge['Earthquake']['Gemini'][2][1] = 1  # Earthquake -> Alarm
+        
+    def add_Survey_true_knowledge(self):
+        self.prior_knowledge['Survey']['True'] = np.zeros((6, 6))
+        self.prior_knowledge['Survey']['True'][0][1] = 1
+        self.prior_knowledge['Survey']['True'][2][1] = 1
+        self.prior_knowledge['Survey']['True'][1][3] = 1
+        self.prior_knowledge['Survey']['True'][1][4] = 1
+        self.prior_knowledge['Survey']['True'][3][5] = 1
+        self.prior_knowledge['Survey']['True'][4][5] = 1
+
+    # A E S O R T
+    def add_Survey_knowledge(self):
+        self.prior_knowledge['Survey'] = {}
+        if 'GPT3' in self.LLMs:
+            # GPT3 knowledge
+            self.prior_knowledge['Survey']['GPT3'] = np.ones((6, 6)) * 2
+            self.prior_knowledge['Survey']['GPT3'][0][3] = 1
+            self.prior_knowledge['Survey']['GPT3'][1][3] = 1
+            self.prior_knowledge['Survey']['GPT3'][2][3] = 1
+            self.prior_knowledge['Survey']['GPT3'][4][5] = 1
+            self.prior_knowledge['Survey']['GPT3'][0][5] = 1
+        
+        if 'GPT4' in self.LLMs:
+            # GPT4 knowledge
+            self.prior_knowledge['Survey']['GPT4'] = np.ones((6, 6)) * 2
+            self.prior_knowledge['Survey']['GPT4'][2][3] = 1
+            self.prior_knowledge['Survey']['GPT4'][3][4] = 1
+
+        if 'Gemini' in self.LLMs:
+            # Gemini knowledge
+            self.prior_knowledge['Survey']['Gemini'] = np.ones((6, 6)) * 2
+            self.prior_knowledge['Survey']['Gemini'][1][3] = 1
+            self.prior_knowledge['Survey']['Gemini'][4][3] = 1
+
+
+
+
     def add_LUCAS_true_knowledge(self):
         self.prior_knowledge['LUCAS'] = {}
 
