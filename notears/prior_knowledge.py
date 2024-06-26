@@ -47,7 +47,7 @@ import numpy as np
 class PriorKnowledge:
     def __init__(self, dataset, true_graph = False, LLMs = ['GPT3', 'GPT4', 'Gemini']):
         self.prior_knowledge = {}
-        if dataset not in ['LUCAS', 'Asia', 'SACHS']:
+        if dataset not in ['LUCAS', 'Asia', 'SACHS', 'Survey', 'Earthquake', 'Child']:
             raise ValueError("The dataset should be one of the following: ['LUCAS', 'Asia', 'SACHS']")
         
         self.LLMs = LLMs

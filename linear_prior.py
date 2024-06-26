@@ -8,7 +8,7 @@ from pytz import timezone
 from notears import PriorKnowledge
 
 
-def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3, prior_knowledge = None, prior_k_weight = 1):
+def notears_linear_prior(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3, prior_knowledge = None, prior_k_weight = 1):
     """Solve min_W L(W; X) + lambda1 ‖W‖_1 s.t. h(W) = 0 using augmented Lagrangian.
 
     Args:
@@ -106,6 +106,7 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
 
 if __name__ == '__main__':
     from notears import utils
+    from linear import notears_linear
     # utils.set_random_seed(1)
 
     # n, d, s0, graph_type, sem_type = 100, 20, 20, 'ER', 'gauss'
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     # X = utils.simulate_linear_sem(W_true, n, sem_type)
     # np.savetxt('X.csv', X, delimiter=',')
 
-    dataset = "Asia"
+    dataset = "Child"
 
     datapath, sol_path, plot_dir = helper.generate_data_path(dataset)
     prior_knowledge = PriorKnowledge(dataset, true_graph=False, LLMs = ['GPT4', 'Gemini', 'GPT3'])
@@ -126,10 +127,17 @@ if __name__ == '__main__':
 
     prior_knowledge.calculate_LLMs_weight(X)
 
-    W_est = notears_linear(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=22, max_iter=100, w_threshold=0.3)
+    W_est_prior = notears_linear_prior(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=22, max_iter=100, w_threshold=0.3)
+    W_est = notears_linear(X, lambda1=0.1, loss_type='l2')
+    W_dag = W_est
+    W_dag[W_dag != 0] = 1
+    assert utils.is_dag(W_est_prior)
     assert utils.is_dag(W_est)
-    np.savetxt(f"{plot_dir}/W_est_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est, delimiter=',')
-    acc = utils.count_accuracy(B_true, W_est != 0)
-    print(acc)
-    helper.plot_result(W_est != 0, B_true, plot_dir, dataset, 'notears_linear_prior', acc)
 
+    np.savetxt(f"{plot_dir}/W_est_prior_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est_prior, delimiter=',')
+    acc_prior = utils.count_accuracy(B_true, W_est_prior != 0)
+    acc = utils.count_accuracy(B_true, W_est != 0)
+
+
+    helper.plot_result(W_est_prior != 0, B_true, plot_dir, dataset, 'notears_linear_prior', acc_prior)
+    helper.plot_result(W_est != 0, B_true, plot_dir, dataset, 'notears_linear', acc)
