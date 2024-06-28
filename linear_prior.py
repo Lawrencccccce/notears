@@ -103,10 +103,38 @@ def notears_linear_prior(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_ma
     W_est[np.abs(W_est) < w_threshold] = 0
     return W_est
 
+def calculate_pure_score(W, X, rho = 1.0, lambda1 = 0.1):
+
+    def _h(W, d):
+        """Evaluate value and gradient of acyclicity constraint."""
+        E = slin.expm(W * W)  # (Zheng et al. 2018)
+        h = np.trace(E) - d
+        #     # A different formulation, slightly faster at the cost of numerical stability
+        #     M = np.eye(d) + W * W / d  # (Yu et al. 2019)
+        #     E = np.linalg.matrix_power(M, d - 1)
+        #     h = (E.T * M).sum() - d
+
+        # if np.isnan(E).any() or np.isinf(E).any():
+        #     print(W * W)
+        #     print("Nan value in E")
+        G_h = E.T * W * 2
+        return h, G_h
+    
+
+    X = X - np.mean(X, axis=0, keepdims=True)
+    M = X @ W
+    R = X - M
+    loss = 0.5 / X.shape[0] * (R ** 2).sum()
+    h = _h(W, X.shape[1])[0]
+
+    return loss + 0.5 * rho * h * h + lambda1 * W.sum()
+
+
 
 if __name__ == '__main__':
     from notears import utils
     from linear import notears_linear
+    import logging
     # utils.set_random_seed(1)
 
     # n, d, s0, graph_type, sem_type = 100, 20, 20, 'ER', 'gauss'
@@ -116,28 +144,80 @@ if __name__ == '__main__':
 
     # X = utils.simulate_linear_sem(W_true, n, sem_type)
     # np.savetxt('X.csv', X, delimiter=',')
+    logging.basicConfig(filename="result_log.log", level=logging.INFO)
 
-    dataset = "Child"
+    datasets = ['LUCAS', 'Asia', 'SACHS', 'Survey', 'Earthquake', 'Child', 'Alarm']
 
-    datapath, sol_path, plot_dir = helper.generate_data_path(dataset)
-    prior_knowledge = PriorKnowledge(dataset, true_graph=False, LLMs = ['GPT4', 'Gemini', 'GPT3'])
-    
-    X = np.load(datapath).astype(np.float32) * 10
-    B_true = np.load(sol_path).astype(np.float32)
+    for dataset in datasets:
 
-    prior_knowledge.calculate_LLMs_weight(X)
+        datapath, sol_path, plot_dir = helper.generate_data_path(dataset)
+        prior_knowledge = PriorKnowledge(dataset, true_graph=False, LLMs = ['GPT4', 'Gemini', 'GPT3'])
+        
+        X = np.load(datapath).astype(np.float32) * 10
+        B_true = np.load(sol_path).astype(np.float32)
 
-    W_est_prior = notears_linear_prior(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=22, max_iter=100, w_threshold=0.3)
-    W_est = notears_linear(X, lambda1=0.1, loss_type='l2')
-    W_dag = W_est
-    W_dag[W_dag != 0] = 1
-    assert utils.is_dag(W_est_prior)
-    assert utils.is_dag(W_est)
+        prior_knowledge.calculate_LLMs_weight(X)
 
-    np.savetxt(f"{plot_dir}/W_est_prior_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est_prior, delimiter=',')
-    acc_prior = utils.count_accuracy(B_true, W_est_prior != 0)
-    acc = utils.count_accuracy(B_true, W_est != 0)
+        # Run original NOTEARS
+        W_est = notears_linear(X, lambda1=0.1, loss_type='l2')
+        assert utils.is_dag(W_est)
 
 
-    helper.plot_result(W_est_prior != 0, B_true, plot_dir, dataset, 'notears_linear_prior', acc_prior)
-    helper.plot_result(W_est != 0, B_true, plot_dir, dataset, 'notears_linear', acc)
+        # calculate accuracy
+        acc = utils.count_accuracy(B_true, W_est != 0)
+        score = calculate_pure_score(W_est, X)
+        logging.info(f"---------------------------------------Starting {dataset}...")
+        logging.info(f"No Prior Knowledge Accuracy: {acc}, Score: {score}")
+        helper.plot_result(W_est != 0, B_true, plot_dir, dataset, 'notears_linear', acc)
+        
+        
+        min_score = np.inf
+        min_weight = None
+        min_acc = None
+
+        for weight in np.linspace(0.1, 10, 20):
+            W_est_prior = notears_linear_prior(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=weight, max_iter=100, w_threshold=0.3)
+            assert utils.is_dag(W_est_prior)
+
+            np.savetxt(f"{plot_dir}/W_est_prior_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est_prior, delimiter=',')
+            
+            score = calculate_pure_score(W_est_prior != 0, X)
+            # calculate accuracy
+            acc_prior = utils.count_accuracy(B_true, W_est_prior != 0)
+
+            if score < min_score:
+                min_score = score
+                min_weight = weight
+                min_acc = utils.count_accuracy(B_true, W_est_prior != 0)
+
+            logging.info(f"Prior Knowledge Accuracy with weight {weight}: {acc_prior}, Score: {score}")
+
+            helper.plot_result(W_est_prior != 0, B_true, plot_dir, dataset, 'notears_linear_prior', acc_prior)
+        
+        for weight in np.linspace(10, 100, 20):
+            W_est_prior = notears_linear_prior(X, lambda1=0.1, loss_type='l2', prior_knowledge=prior_knowledge, prior_k_weight=weight, max_iter=100, w_threshold=0.3)
+            assert utils.is_dag(W_est_prior)
+
+            np.savetxt(f"{plot_dir}/W_est_prior_{datetime.now(timezone('Australia/Sydney')).strftime('%Y-%m-%d_%H-%M-%S-%f')[:-3]}.csv", W_est_prior, delimiter=',')
+            
+            # calculate accuracy
+            score = calculate_pure_score(W_est_prior, X)
+            acc_prior = utils.count_accuracy(B_true, W_est_prior != 0)
+
+            if score < min_score:
+                min_score = score
+                min_weight = weight
+                min_acc = utils.count_accuracy(B_true, W_est_prior != 0)
+
+            logging.info(f"Prior Knowledge Accuracy with weight {weight}: {acc_prior}, Score: {score}")
+
+            helper.plot_result(W_est_prior != 0, B_true, plot_dir, dataset, 'notears_linear_prior', acc_prior)
+        
+
+        
+        logging.info(f"Finished {dataset}...---------------------------------")
+        logging.info(f"Best Weight: {min_weight}, Best Accuracy: {min_acc}, Best Score: {min_score}")
+        logging.info("------------------------------------------------------")
+        logging.info("------------------------------------------------------")
+        logging.info("------------------------------------------------------")
+        

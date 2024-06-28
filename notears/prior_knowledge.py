@@ -47,8 +47,8 @@ import numpy as np
 class PriorKnowledge:
     def __init__(self, dataset, true_graph = False, LLMs = ['GPT3', 'GPT4', 'Gemini']):
         self.prior_knowledge = {}
-        if dataset not in ['LUCAS', 'Asia', 'SACHS', 'Survey', 'Earthquake', 'Child']:
-            raise ValueError("The dataset should be one of the following: ['LUCAS', 'Asia', 'SACHS']")
+        if dataset not in ['LUCAS', 'Asia', 'SACHS', 'Survey', 'Earthquake', 'Child', 'Alarm']:
+            raise ValueError("The dataset should be one of the following: ['LUCAS', 'Asia', 'SACHS', 'Survey', 'Earthquake', 'Child', 'Alarm']")
         
         self.LLMs = LLMs
         if true_graph:
@@ -74,6 +74,8 @@ class PriorKnowledge:
                 self.add_Earthquake_knowledge()
             if dataset == 'Child':
                 self.add_Child_knowledge()
+            if dataset == 'Alarm':
+                self.add_Alarm_knowledge()
 
         self.dataset = dataset
         self.intersection_result = {}
@@ -121,6 +123,8 @@ class PriorKnowledge:
     def get_dataset(self):
         return self.dataset
 
+
+
     def add_intersection_result(self):
         for dataset in self.prior_knowledge:
             p = 0
@@ -135,6 +139,93 @@ class PriorKnowledge:
                 result_matrix[edge] = 1
             self.intersection_result[dataset] = result_matrix
         
+
+
+    def add_Alarm_knowledge(self):
+        items = [
+                    "LVFAILURE", "HISTORY", "LVEDVOLUME", "CVP", "PCWP", "HYPOVOLEMIA",
+                    "STROKEVOLUME", "ERRLOWOUTPUT", "HRBP", "HR", "ERRCAUTER", "HREKG",
+                    "HRSAT", "ANAPHYLAXIS", "TPR", "ARTCO2", "EXPCO2", "VENTLUNG", "INTUBATION",
+                    "MINVOL", "FIO2", "PVSAT", "VENTALV", "SAO2", "SHUNT", "PULMEMBOLUS", "PAP",
+                    "PRESS", "KINKEDTUBE", "VENTTUBE", "MINVOLSET", "VENTMACH", "DISCONNECT",
+                    "CATECHOL", "INSUFFANESTH", "CO", "BP"
+                ]
+        alarm_variables = {item: index for index, item in enumerate(items)}
+
+        if 'GPT3' in self.LLMs:
+            # GPT3 knowledge
+            self.prior_knowledge['Alarm'] = {}
+            self.prior_knowledge['Alarm']['GPT3'] = np.ones((37, 37)) * 2
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['LVFAILURE']][alarm_variables['STROKEVOLUME']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['LVFAILURE']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['LVFAILURE']][alarm_variables['HRBP']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['HISTORY']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['LVEDVOLUME']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['CVP']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['PCWP']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['HYPOVOLEMIA']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['STROKEVOLUME']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['STROKEVOLUME']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['HRBP']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['ANAPHYLAXIS']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['TPR']][alarm_variables['LVFAILURE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['ARTCO2']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['EXPCO2']][alarm_variables['VENTLUNG']] = 1      
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['INTUBATION']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['MINVOL']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['FIO2']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['PVSAT']][alarm_variables['VENTALV']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['SAO2']][alarm_variables['VENTALV']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['SHUNT']][alarm_variables['VENTALV']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['PULMEMBOLUS']][alarm_variables['PAP']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['PRESS']][alarm_variables['KINKEDTUBE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['VENTTUBE']][alarm_variables['KINKEDTUBE']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['MINVOLSET']][alarm_variables['VENTMACH']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['VENTMACH']][alarm_variables['DISCONNECT']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['CATECHOL']][alarm_variables['BP']] = 1
+            self.prior_knowledge['Alarm']['GPT3'][alarm_variables['INSUFFANESTH']][alarm_variables['BP']] = 1
+        
+        if 'GPT4' in self.LLMs:
+            # GPT4 knowledge
+            self.prior_knowledge['Alarm']['GPT4'] = np.ones((37, 37)) * 2
+            # Adding the specified edges to the GPT4 knowledge dictionary
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['LVFAILURE']][alarm_variables['PCWP']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['LVFAILURE']][alarm_variables['CO']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['HYPOVOLEMIA']][alarm_variables['CVP']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['HYPOVOLEMIA']][alarm_variables['PCWP']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['HYPOVOLEMIA']][alarm_variables['STROKEVOLUME']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['STROKEVOLUME']][alarm_variables['CO']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['CO']][alarm_variables['BP']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['HR']][alarm_variables['CO']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['TPR']][alarm_variables['BP']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['ARTCO2']][alarm_variables['EXPCO2']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['VENTLUNG']][alarm_variables['EXPCO2']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['INTUBATION']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['MINVOL']][alarm_variables['VENTLUNG']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['FIO2']][alarm_variables['SAO2']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['SHUNT']][alarm_variables['SAO2']] = 1
+            self.prior_knowledge['Alarm']['GPT4'][alarm_variables['PULMEMBOLUS']][alarm_variables['PAP']] = 1
+
+        if 'Gemini' in self.LLMs:
+            self.prior_knowledge['Alarm']['Gemini'] = np.ones((37, 37)) * 2
+            # Adding the specified edges to the GPT4 knowledge dictionary based on the provided structure and new edges
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['LVFAILURE']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['HYPOVOLEMIA']][alarm_variables['CVP']] = 1  
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['CVP']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['LVFAILURE']][alarm_variables['PCWP']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['PULMEMBOLUS']][alarm_variables['PAP']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['ERRLOWOUTPUT']][alarm_variables['HR']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['HR']][alarm_variables['HRBP']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['INSUFFANESTH']][alarm_variables['HR']] = 1  
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['SHUNT']][alarm_variables['SAO2']] = 1  
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['FIO2']][alarm_variables['SAO2']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['PULMEMBOLUS']][alarm_variables['VENTLUNG']] = 1 
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['INTUBATION']][alarm_variables['VENTLUNG']] = 1 
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['DISCONNECT']][alarm_variables['ERRLOWOUTPUT']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['CATECHOL']][alarm_variables['HR']] = 1
+            self.prior_knowledge['Alarm']['Gemini'][alarm_variables['KINKEDTUBE']][alarm_variables['VENTLUNG']] = 1  
+
+
 
     def add_Child_knowledge(self):
         items = ["DuctFlow", "HypDistrib", "CardiacMixing", "HypoxiaInO2", "LungParench", "CO2", "ChestXray", "LungFlow", "Grunting", "Sick", "LVH", "LVHreport", "LowerBodyO2", "RUQO2", "CO2Report", "XrayReport", "BirthAsphyxia", "Disease", "GruntingReport", "Age"]

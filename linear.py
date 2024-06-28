@@ -57,7 +57,7 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
 
     def _func(w):
         """Evaluate value and gradient of augmented Lagrangian for doubled variables ([2 d^2] array)."""
-        W = _adj(w)
+        W = _adj(w) if w.shape == (2 * d * d,) else w
         loss, G_loss = _loss(W)
         h, G_h = _h(W)
         obj = loss + 0.5 * rho * h * h + alpha * h + lambda1 * w.sum()
